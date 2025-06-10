@@ -1,7 +1,21 @@
 package main
 
-import "fmt"
+import (
+	"flag"
+
+	"github.com/AyanokojiKiyotaka8/Booking/api"
+	"github.com/gofiber/fiber/v2"
+)
 
 func main() {
-	fmt.Println("Hello")
+	listenAddr := flag.String("listenAddr", ":5000", "The listen address of the API server")
+	flag.Parse()
+
+	app := fiber.New()
+	apiv1 := app.Group("/apiv1")
+
+	apiv1.Get("/user", api.HandleGetUsers)
+	apiv1.Get("/user/:id", api.HandleGetUser)
+
+	app.Listen(*listenAddr)
 }
