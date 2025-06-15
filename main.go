@@ -21,8 +21,14 @@ func main() {
 		log.Fatal(err)
 	}
 
+	// storages
+	userStore := db.NewMongoUserStore(client, db.DBNAME)
+	hotelStore := db.NewMongoHotelStore(client, db.DBNAME)
+	roomStore := db.NewMongoRoomStore(client, db.DBNAME, hotelStore)
+
 	// handlers
-	userHandler := api.NewUserHandler(db.NewMongoUserStore(client, db.DBNAME))
+	userHandler := api.NewUserHandler(userStore)
+	hotelHandler := api.NewHotelHandler(hotelStore, roomStore)
 
 	app := fiber.New(fiber.Config{
 		ErrorHandler: func(c *fiber.Ctx, err error) error {
@@ -37,6 +43,9 @@ func main() {
 	apiv1.Post("/user", userHandler.HandlePostUser)
 	apiv1.Delete("/user/:id", userHandler.HandleDeleteUser)
 	apiv1.Put("/user/:id", userHandler.HandlePutUser)
+
+	// hotel API's
+	apiv1.Get("/hotel", hotelHandler.HandleGetHotels)
 
 	app.Listen(*listenAddr)
 }

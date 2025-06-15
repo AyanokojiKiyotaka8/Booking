@@ -2,41 +2,44 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 
 	"github.com/AyanokojiKiyotaka8/Booking/db"
 	"github.com/AyanokojiKiyotaka8/Booking/types"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-func main() {
-	client, err := mongo.Connect(context.TODO(), options.Client().ApplyURI(db.DBURI))
-	if err != nil {
-		log.Fatal(err)
-	}
+var (
+	client     *mongo.Client
+	hotelStore db.HotelStore
+	roomStore  db.RoomStore
+)
 
-	hotelStore := db.NewMongoHotelStore(client, db.DBNAME)
-	roomStore := db.NewMongoRoomStore(client, db.DBNAME)
-
+func seedHotel(name string, location string, rating int) {
 	hotel := types.Hotel{
-		Name:     "Aaa",
-		Location: "Bbb",
+		Name:     name,
+		Location: location,
+		Rooms:    []primitive.ObjectID{},
+		Rating:   rating,
 	}
 
 	rooms := []types.Room{
 		{
 			NumPersons: 1,
 			Price:      1.11,
+			SeaSide:    false,
 		},
 		{
 			NumPersons: 2,
 			Price:      2.22,
+			SeaSide:    false,
 		},
 		{
 			NumPersons: 3,
 			Price:      3.33,
+			SeaSide:    true,
 		},
 	}
 
@@ -44,14 +47,33 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(insertedHotel)
 
 	for _, room := range rooms {
 		room.HotelID = insertedHotel.ID
-		insertedRoom, err := roomStore.InsertRoom(context.Background(), &room)
+		_, err := roomStore.InsertRoom(context.Background(), &room)
 		if err != nil {
 			log.Fatal(err)
 		}
-		fmt.Println(insertedRoom)
 	}
+}
+
+func main() {
+	seedHotel("Aaa", "Bbb", 1)
+	seedHotel("Qqq", "Www", 2)
+	seedHotel("Eee", "Rrr", 3)
+}
+
+func init() {
+	var err error
+	client, err = mongo.Connect(context.TODO(), options.Client().ApplyURI(db.DBURI))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if err := client.Database(db.DBNAME).Drop(context.Background()); err != nil {
+		log.Fatal(err)
+	}
+
+	hotelStore = db.NewMongoHotelStore(client, db.DBNAME)
+	roomStore = db.NewMongoRoomStore(client, db.DBNAME, hotelStore)
 }
