@@ -59,6 +59,10 @@ func NewUserFromParams(params *CreateUserParams) (*User, error) {
 	}, nil
 }
 
+func IsValidPassword(encpw, pw string) bool {
+	return bcrypt.CompareHashAndPassword([]byte(encpw), []byte(pw)) == nil
+}
+
 func (p *CreateUserParams) Validate() map[string]string {
 	errors := make(map[string]string)
 	if len(p.FirstName) < minFirstNameLen {
