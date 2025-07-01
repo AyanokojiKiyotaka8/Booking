@@ -54,13 +54,13 @@ func TestPostUser(t *testing.T) {
 	req := httptest.NewRequest("POST", "/", bytes.NewReader(b))
 	req.Header.Add("Content-Type", "application/json")
 
-	res, err := app.Test(req)
+	resp, err := app.Test(req)
 	if err != nil {
 		t.Error(err)
 	}
 
 	var user types.User
-	if err := json.NewDecoder(res.Body).Decode(&user); err != nil {
+	if err := json.NewDecoder(resp.Body).Decode(&user); err != nil {
 		t.Error(err)
 	}
 
