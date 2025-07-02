@@ -7,6 +7,7 @@ import (
 	"github.com/AyanokojiKiyotaka8/Booking/db"
 	"github.com/AyanokojiKiyotaka8/Booking/types"
 	"github.com/gofiber/fiber/v2"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -27,14 +28,16 @@ func NewRoomHandler(store *db.Store) *RoomHandler {
 }
 
 func (h *RoomHandler) HandleBookRoom(c *fiber.Ctx) error {
-	roomID, err := primitive.ObjectIDFromHex(c.Params("id"))
-	if err != nil {
-		return err
-	}
-
 	var params RoomBookParams
 	if err := c.BodyParser(&params); err != nil {
 		return err
+	}
+
+	if time.Now().After(params.FromDate) || !params.TillDate.After(params.FromDate) {
+		return c.Status(http.StatusBadRequest).JSON(genericResp{
+			Type: "error",
+			Msg:  "inappropriate booking period",
+		})
 	}
 
 	user, ok := c.Context().UserValue("user").(*types.User)
@@ -42,6 +45,33 @@ func (h *RoomHandler) HandleBookRoom(c *fiber.Ctx) error {
 		return c.Status(http.StatusInternalServerError).JSON(genericResp{
 			Type: "error",
 			Msg:  "internal server error",
+		})
+	}
+
+	roomID, err := primitive.ObjectIDFromHex(c.Params("id"))
+	if err != nil {
+		return err
+	}
+
+	filter := bson.M{
+		"roomID": roomID,
+		"fromDate": bson.M{
+			"$lte": params.TillDate,
+		},
+		"tillDate": bson.M{
+			"$gte": params.FromDate,
+		},
+	}
+
+	bookings, err := h.store.Booking.GetBookings(c.Context(), filter)
+	if err != nil {
+		return err
+	}
+
+	if len(bookings) > 0 {
+		return c.Status(http.StatusBadRequest).JSON(genericResp{
+			Type: "error",
+			Msg:  "room is not available for that period",
 		})
 	}
 
@@ -53,5 +83,19 @@ func (h *RoomHandler) HandleBookRoom(c *fiber.Ctx) error {
 		UserID:     user.ID,
 	}
 
-	return c.JSON(booking)
+	insertedBooking, err := h.store.Booking.InsertBooking(c.Context(), &booking)
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(map[string]any{"booked": insertedBooking})
+}
+
+func (h *RoomHandler) HandleGetRooms(c *fiber.Ctx) error {
+	filter := bson.M{}
+	rooms, err := h.store.Room.GetRooms(c.Context(), filter)
+	if err != nil {
+		return err
+	}
+	return c.JSON(rooms)
 }
