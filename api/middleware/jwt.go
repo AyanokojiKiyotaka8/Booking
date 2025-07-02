@@ -4,21 +4,38 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/AyanokojiKiyotaka8/Booking/db"
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v5"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-func JWTAuthentication(c *fiber.Ctx) error {
-	token := c.Get("X-Api-Token")
-	if len(token) == 0 {
-		return fmt.Errorf("unauthorized")
+func JWTAuthentication(userStore db.UserStore) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		token := c.Get("X-Api-Token")
+		if len(token) == 0 {
+			return fmt.Errorf("unauthorized")
+		}
+
+		claims, err := validateToken(token)
+		if err != nil {
+			return err
+		}
+
+		userID, err := primitive.ObjectIDFromHex(claims["id"].(string))
+		if err != nil {
+			return fmt.Errorf("unauthorized")
+		}
+
+		filter := bson.M{"_id": userID}
+		user, err := userStore.GetUser(c.Context(), filter)
+		if err != nil {
+			return fmt.Errorf("unauthorized")
+		}
+		c.Context().SetUserValue("user", user)
+		return c.Next()
 	}
-	claims, err := validateToken(token)
-	if err != nil {
-		return err
-	}
-	fmt.Println(claims)
-	return c.Next()
 }
 
 func validateToken(tokenStr string) (jwt.MapClaims, error) {

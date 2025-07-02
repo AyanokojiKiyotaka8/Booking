@@ -36,13 +36,14 @@ func main() {
 	userHandler := api.NewUserHandler(userStore)
 	hotelHandler := api.NewHotelHandler(store)
 	authHandler := api.NewAuthHandler(userStore)
+	roomHandler := api.NewRoomHandler(store)
 
 	app := fiber.New(fiber.Config{
 		ErrorHandler: func(c *fiber.Ctx, err error) error {
 			return c.JSON(map[string]string{"error": err.Error()})
 		},
 	})
-	apiv1 := app.Group("/api/v1", middleware.JWTAuthentication)
+	apiv1 := app.Group("/api/v1", middleware.JWTAuthentication(userStore))
 	auth := app.Group("/api")
 
 	// auth API's
@@ -59,6 +60,9 @@ func main() {
 	apiv1.Get("/hotel", hotelHandler.HandleGetHotels)
 	apiv1.Get("/hotel/:id", hotelHandler.HandleGetHotel)
 	apiv1.Get("/hotel/:id/rooms", hotelHandler.HandleGetRooms)
+
+	// room API's
+	apiv1.Post("/room/:id/book", roomHandler.HandleBookRoom)
 
 	app.Listen(*listenAddr)
 }
