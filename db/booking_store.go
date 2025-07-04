@@ -33,19 +33,18 @@ func (s *MongoBookingStore) InsertBooking(ctx context.Context, booking *types.Bo
 	if err != nil {
 		return nil, err
 	}
-
 	booking.ID = insertedBooking.InsertedID.(primitive.ObjectID)
 	return booking, nil
 }
 
 func (s *MongoBookingStore) GetBookings(ctx context.Context, filter bson.M) ([]*types.Booking, error) {
-	curr, err := s.coll.Find(ctx, filter)
+	cur, err := s.coll.Find(ctx, filter)
 	if err != nil {
 		return nil, err
 	}
 
 	var bookings []*types.Booking
-	if err := curr.All(ctx, &bookings); err != nil {
+	if err := cur.All(ctx, &bookings); err != nil {
 		return nil, err
 	}
 	return bookings, nil

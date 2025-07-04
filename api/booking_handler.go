@@ -89,7 +89,6 @@ func (h *BookingHandler) HandleCancelBooking(c *fiber.Ctx) error {
 	if err := h.store.Booking.UpdateBooking(c.Context(), filter, update); err != nil {
 		return err
 	}
-
 	return c.JSON(genericResp{
 		Type: "msg",
 		Msg:  "cancelled booking",

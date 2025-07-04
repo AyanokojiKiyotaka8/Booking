@@ -48,7 +48,7 @@ func invalidCredentials(c *fiber.Ctx) error {
 }
 
 func (h *AuthHandler) HandleAuthenticate(c *fiber.Ctx) error {
-	var params AuthParams
+	var params *AuthParams
 	if err := c.BodyParser(&params); err != nil {
 		return err
 	}
@@ -66,15 +66,15 @@ func (h *AuthHandler) HandleAuthenticate(c *fiber.Ctx) error {
 		return invalidCredentials(c)
 	}
 
-	resp := AuthResponse{
+	resp := &AuthResponse{
 		User:  user,
-		Token: createTokenFromUser(user),
+		Token: CreateTokenFromUser(user),
 	}
 	return c.JSON(resp)
 }
 
-func createTokenFromUser(user *types.User) string {
-	claims := jwt.MapClaims{
+func CreateTokenFromUser(user *types.User) string {
+	claims := &jwt.MapClaims{
 		"id":    user.ID,
 		"email": user.Email,
 		"exp":   jwt.NewNumericDate(time.Now().Add(time.Hour * 1000)),

@@ -28,7 +28,7 @@ func NewRoomHandler(store *db.Store) *RoomHandler {
 }
 
 func (h *RoomHandler) HandleBookRoom(c *fiber.Ctx) error {
-	var params RoomBookParams
+	var params *RoomBookParams
 	if err := c.BodyParser(&params); err != nil {
 		return err
 	}
@@ -63,12 +63,10 @@ func (h *RoomHandler) HandleBookRoom(c *fiber.Ctx) error {
 		},
 		"cancelled": false,
 	}
-
 	bookings, err := h.store.Booking.GetBookings(c.Context(), filter)
 	if err != nil {
 		return err
 	}
-
 	if len(bookings) > 0 {
 		return c.Status(http.StatusBadRequest).JSON(genericResp{
 			Type: "error",
@@ -76,19 +74,17 @@ func (h *RoomHandler) HandleBookRoom(c *fiber.Ctx) error {
 		})
 	}
 
-	booking := types.Booking{
+	booking := &types.Booking{
 		RoomID:     roomID,
 		FromDate:   params.FromDate,
 		TillDate:   params.TillDate,
 		NumPersons: params.NumPersons,
 		UserID:     user.ID,
 	}
-
-	insertedBooking, err := h.store.Booking.InsertBooking(c.Context(), &booking)
+	insertedBooking, err := h.store.Booking.InsertBooking(c.Context(), booking)
 	if err != nil {
 		return err
 	}
-
 	return c.JSON(map[string]any{"booked": insertedBooking})
 }
 

@@ -2,49 +2,28 @@ package api
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
 	"testing"
 
-	"github.com/AyanokojiKiyotaka8/Booking/db"
-	"github.com/AyanokojiKiyotaka8/Booking/types"
+	"github.com/AyanokojiKiyotaka8/Booking/db/fixtures"
 	"github.com/gofiber/fiber/v2"
 )
-
-func makeTestUser(t *testing.T, userStore db.UserStore) *types.User {
-	user, err := types.NewUserFromParams(&types.CreateUserParams{
-		FirstName: "qwe",
-		LastName:  "rty",
-		Email:     "qwe@rty.com",
-		Password:  "qwerty123",
-	})
-
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	insertedUser, err := userStore.InsertUser(context.Background(), user)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return insertedUser
-}
 
 func TestAuthenticateSuccess(t *testing.T) {
 	tdb := setup(t)
 	defer tdb.teardown(t)
-	insertedUser := makeTestUser(t, tdb.UserStore)
+	insertedUser := fixtures.AddUser(tdb.store, false, "qwe", "rty")
 
 	app := fiber.New()
-	authHandler := NewAuthHandler(tdb.UserStore)
+	authHandler := NewAuthHandler(tdb.store.User)
 	app.Post("/auth", authHandler.HandleAuthenticate)
 
-	params := AuthParams{
+	params := &AuthParams{
 		Email:    "qwe@rty.com",
-		Password: "qwerty123",
+		Password: "qwe_rty",
 	}
 
 	b, _ := json.Marshal(params)
@@ -60,7 +39,7 @@ func TestAuthenticateSuccess(t *testing.T) {
 		t.Fatalf("expected to get http status code 200, but got %d", resp.StatusCode)
 	}
 
-	var authResp AuthResponse
+	var authResp *AuthResponse
 	if err := json.NewDecoder(resp.Body).Decode(&authResp); err != nil {
 		t.Fatal(err)
 	}
@@ -78,13 +57,13 @@ func TestAuthenticateSuccess(t *testing.T) {
 func TestAuthenticateFailure(t *testing.T) {
 	tdb := setup(t)
 	defer tdb.teardown(t)
-	makeTestUser(t, tdb.UserStore)
+	fixtures.AddUser(tdb.store, false, "qwe", "rty")
 
 	app := fiber.New()
-	authHandler := NewAuthHandler(tdb.UserStore)
+	authHandler := NewAuthHandler(tdb.store.User)
 	app.Post("/auth", authHandler.HandleAuthenticate)
 
-	params := AuthParams{
+	params := &AuthParams{
 		Email:    "qwe@rty.com",
 		Password: "qwerty12345",
 	}
@@ -102,7 +81,7 @@ func TestAuthenticateFailure(t *testing.T) {
 		t.Fatalf("expected to get status code 400, but got %d", resp.StatusCode)
 	}
 
-	var genResp genericResp
+	var genResp *genericResp
 	if err := json.NewDecoder(resp.Body).Decode(&genResp); err != nil {
 		t.Fatal(err)
 	}

@@ -22,22 +22,18 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// storages
-	userStore := db.NewMongoUserStore(client, db.DBNAME)
-	hotelStore := db.NewMongoHotelStore(client, db.DBNAME)
-	roomStore := db.NewMongoRoomStore(client, db.DBNAME, hotelStore)
-	bookingStore := db.NewMongoBookingStore(client, db.DBNAME)
+	// DBs
 	store := &db.Store{
-		User:    userStore,
-		Hotel:   hotelStore,
-		Room:    roomStore,
-		Booking: bookingStore,
+		User:    db.NewMongoUserStore(client, db.DBNAME),
+		Hotel:   db.NewMongoHotelStore(client, db.DBNAME),
+		Booking: db.NewMongoBookingStore(client, db.DBNAME),
 	}
+	store.Room = db.NewMongoRoomStore(client, db.DBNAME, store.Hotel)
 
 	// handlers
-	userHandler := api.NewUserHandler(userStore)
+	userHandler := api.NewUserHandler(store.User)
 	hotelHandler := api.NewHotelHandler(store)
-	authHandler := api.NewAuthHandler(userStore)
+	authHandler := api.NewAuthHandler(store.User)
 	roomHandler := api.NewRoomHandler(store)
 	bookingHandler := api.NewBookingHandler(store)
 
@@ -46,33 +42,33 @@ func main() {
 			return c.JSON(map[string]string{"error": err.Error()})
 		},
 	})
-	apiv1 := app.Group("/api/v1", middleware.JWTAuthentication(userStore))
+	apiv1 := app.Group("/api/v1", middleware.JWTAuthentication(store.User))
 	admin := apiv1.Group("/admin", middleware.AdminAuth)
 	auth := app.Group("/api")
 
-	// auth API's
+	// auth APIs
 	auth.Post("/auth", authHandler.HandleAuthenticate)
 
-	// user API's
+	// user APIs
 	apiv1.Get("/user", userHandler.HandleGetUsers)
 	apiv1.Get("/user/:id", userHandler.HandleGetUser)
 	apiv1.Post("/user", userHandler.HandlePostUser)
 	apiv1.Delete("/user/:id", userHandler.HandleDeleteUser)
 	apiv1.Put("/user/:id", userHandler.HandlePutUser)
 
-	// hotel API's
+	// hotel APIs
 	apiv1.Get("/hotel", hotelHandler.HandleGetHotels)
 	apiv1.Get("/hotel/:id", hotelHandler.HandleGetHotel)
 	apiv1.Get("/hotel/:id/rooms", hotelHandler.HandleGetRooms)
 
-	// room API's
+	// room APIs
 	apiv1.Post("/room/:id/book", roomHandler.HandleBookRoom)
 	apiv1.Get("/room", roomHandler.HandleGetRooms)
 
-	// booking API's with admin authorized
+	// booking APIs with admin authorized
 	admin.Get("/booking", bookingHandler.HandleGetBookings)
 
-	// booking API's with user authorized
+	// booking APIs with user authorized
 	apiv1.Get("/booking/:id", bookingHandler.HandleGetBooking)
 	apiv1.Get("/booking/:id/cancel", bookingHandler.HandleCancelBooking)
 

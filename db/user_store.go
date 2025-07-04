@@ -2,7 +2,6 @@ package db
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/AyanokojiKiyotaka8/Booking/types"
 	"go.mongodb.org/mongo-driver/bson"
@@ -10,13 +9,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-type Dropper interface {
-	Drop(context.Context) error
-}
-
 type UserStore interface {
-	Dropper
-
 	GetUser(context.Context, bson.M) (*types.User, error)
 	GetUsers(context.Context, bson.M) ([]*types.User, error)
 	InsertUser(context.Context, *types.User) (*types.User, error)
@@ -29,11 +22,6 @@ type MongoUserStore struct {
 	coll   *mongo.Collection
 }
 
-func (s *MongoUserStore) Drop(ctx context.Context) error {
-	fmt.Println("------- dropping user collection -------")
-	return s.coll.Drop(ctx)
-}
-
 func NewMongoUserStore(client *mongo.Client, dbname string) *MongoUserStore {
 	return &MongoUserStore{
 		client: client,
@@ -42,11 +30,11 @@ func NewMongoUserStore(client *mongo.Client, dbname string) *MongoUserStore {
 }
 
 func (s *MongoUserStore) GetUser(ctx context.Context, filter bson.M) (*types.User, error) {
-	var user types.User
+	var user *types.User
 	if err := s.coll.FindOne(ctx, filter).Decode(&user); err != nil {
 		return nil, err
 	}
-	return &user, nil
+	return user, nil
 }
 
 func (s *MongoUserStore) GetUsers(ctx context.Context, filter bson.M) ([]*types.User, error) {
