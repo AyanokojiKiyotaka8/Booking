@@ -2,6 +2,7 @@ package api
 
 import (
 	"errors"
+	"net/http"
 
 	"github.com/AyanokojiKiyotaka8/Booking/db"
 	"github.com/AyanokojiKiyotaka8/Booking/types"
@@ -25,16 +26,16 @@ func (h *UserHandler) HandleGetUser(c *fiber.Ctx) error {
 	id := c.Params("id")
 	oid, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
-		return err
+		return NewError(http.StatusBadRequest, "invalid user ID format")
 	}
 
 	filter := bson.M{"_id": oid}
 	user, err := h.userStore.GetUser(c.Context(), filter)
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
-			return c.JSON(map[string]string{"error": "not found"})
+			return ErrNotFound()
 		}
-		return err
+		return ErrInternalServerError()
 	}
 	return c.JSON(user)
 }
@@ -43,7 +44,7 @@ func (h *UserHandler) HandleGetUsers(c *fiber.Ctx) error {
 	filter := bson.M{}
 	users, err := h.userStore.GetUsers(c.Context(), filter)
 	if err != nil {
-		return err
+		return ErrInternalServerError()
 	}
 	return c.JSON(users)
 }
@@ -51,20 +52,20 @@ func (h *UserHandler) HandleGetUsers(c *fiber.Ctx) error {
 func (h *UserHandler) HandlePostUser(c *fiber.Ctx) error {
 	var userParams *types.CreateUserParams
 	if err := c.BodyParser(&userParams); err != nil {
-		return err
+		return ErrBadRequest()
 	}
 	if errors := userParams.Validate(); len(errors) > 0 {
-		return c.JSON(errors)
+		return c.Status(http.StatusBadRequest).JSON(errors)
 	}
 
 	user, err := types.NewUserFromParams(userParams)
 	if err != nil {
-		return err
+		return ErrBadRequest()
 	}
 
 	insertedUser, err := h.userStore.InsertUser(c.Context(), user)
 	if err != nil {
-		return err
+		return ErrInternalServerError()
 	}
 	return c.JSON(insertedUser)
 }
@@ -73,12 +74,16 @@ func (h *UserHandler) HandleDeleteUser(c *fiber.Ctx) error {
 	id := c.Params("id")
 	oid, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
-		return err
+		return NewError(http.StatusBadRequest, "invalid user ID format")
 	}
 
 	filter := bson.M{"_id": oid}
-	if err := h.userStore.DeleteUser(c.Context(), filter); err != nil {
-		return err
+	err = h.userStore.DeleteUser(c.Context(), filter)
+	if err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return ErrNotFound()
+		}
+		return ErrInternalServerError()
 	}
 	return c.JSON(map[string]string{"deleted": id})
 }
@@ -87,20 +92,24 @@ func (h *UserHandler) HandlePutUser(c *fiber.Ctx) error {
 	id := c.Params("id")
 	oid, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
-		return err
+		return NewError(http.StatusBadRequest, "invalid user ID format")
 	}
 
 	var params *types.UpdateUserParams
 	if err := c.BodyParser(&params); err != nil {
-		return err
+		return ErrBadRequest()
 	}
 
 	filter := bson.M{"_id": oid}
 	update := bson.M{
 		"$set": params.ToBSON(),
 	}
-	if err := h.userStore.UpdateUser(c.Context(), filter, update); err != nil {
-		return err
+	err = h.userStore.UpdateUser(c.Context(), filter, update)
+	if err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return ErrNotFound()
+		}
+		return ErrInternalServerError()
 	}
 	return c.JSON(map[string]string{"updated": id})
 }

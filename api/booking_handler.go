@@ -1,7 +1,7 @@
 package api
 
 import (
-	"fmt"
+	"errors"
 	"net/http"
 
 	"github.com/AyanokojiKiyotaka8/Booking/db"
@@ -9,6 +9,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type BookingHandler struct {
@@ -25,7 +26,7 @@ func (h *BookingHandler) HandleGetBookings(c *fiber.Ctx) error {
 	filter := bson.M{}
 	bookings, err := h.store.Booking.GetBookings(c.Context(), filter)
 	if err != nil {
-		return err
+		return ErrInternalServerError()
 	}
 	return c.JSON(bookings)
 }
@@ -33,25 +34,25 @@ func (h *BookingHandler) HandleGetBookings(c *fiber.Ctx) error {
 func (h *BookingHandler) HandleGetBooking(c *fiber.Ctx) error {
 	id, err := primitive.ObjectIDFromHex(c.Params("id"))
 	if err != nil {
-		return err
+		return NewError(http.StatusBadRequest, "invalid booking ID format")
 	}
 
 	filter := bson.M{"_id": id}
 	booking, err := h.store.Booking.GetBooking(c.Context(), filter)
 	if err != nil {
-		return err
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return ErrNotFound()
+		}
+		return ErrInternalServerError()
 	}
 
 	user, ok := c.Context().UserValue("user").(*types.User)
 	if !ok {
-		return fmt.Errorf("unauthorized")
+		return ErrInternalServerError()
 	}
 
 	if booking.UserID != user.ID {
-		return c.Status(http.StatusUnauthorized).JSON(genericResp{
-			Type: "error",
-			Msg:  "not authorized",
-		})
+		return ErrForbidden()
 	}
 	return c.JSON(booking)
 }
@@ -59,25 +60,25 @@ func (h *BookingHandler) HandleGetBooking(c *fiber.Ctx) error {
 func (h *BookingHandler) HandleCancelBooking(c *fiber.Ctx) error {
 	id, err := primitive.ObjectIDFromHex(c.Params("id"))
 	if err != nil {
-		return err
+		return NewError(http.StatusBadRequest, "invalid booking ID format")
 	}
 
 	filter := bson.M{"_id": id}
 	booking, err := h.store.Booking.GetBooking(c.Context(), filter)
 	if err != nil {
-		return err
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return ErrNotFound()
+		}
+		return ErrInternalServerError()
 	}
 
 	user, ok := c.Context().UserValue("user").(*types.User)
 	if !ok {
-		return fmt.Errorf("unauthorized")
+		return ErrInternalServerError()
 	}
 
 	if !user.IsAdmin && booking.UserID != user.ID {
-		return c.Status(http.StatusUnauthorized).JSON(genericResp{
-			Type: "error",
-			Msg:  "not authorized",
-		})
+		return ErrForbidden()
 	}
 
 	filter = bson.M{"_id": booking.ID}
@@ -87,10 +88,7 @@ func (h *BookingHandler) HandleCancelBooking(c *fiber.Ctx) error {
 		},
 	}
 	if err := h.store.Booking.UpdateBooking(c.Context(), filter, update); err != nil {
-		return err
+		return ErrInternalServerError()
 	}
-	return c.JSON(genericResp{
-		Type: "msg",
-		Msg:  "cancelled booking",
-	})
+	return c.JSON("cancelled booking")
 }

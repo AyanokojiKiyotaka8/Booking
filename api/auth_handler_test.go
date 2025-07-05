@@ -17,13 +17,15 @@ func TestAuthenticateSuccess(t *testing.T) {
 	defer tdb.teardown(t)
 	insertedUser := fixtures.AddUser(tdb.store, false, "qwe", "rty")
 
-	app := fiber.New()
+	app := fiber.New(fiber.Config{
+		ErrorHandler: ErrorHandler,
+	})
 	authHandler := NewAuthHandler(tdb.store.User)
 	app.Post("/auth", authHandler.HandleAuthenticate)
 
 	params := &AuthParams{
 		Email:    "qwe@rty.com",
-		Password: "qwe_rty",
+		Password: "qwe_rty", // correct password
 	}
 
 	b, _ := json.Marshal(params)
@@ -36,7 +38,7 @@ func TestAuthenticateSuccess(t *testing.T) {
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("expected to get http status code 200, but got %d", resp.StatusCode)
+		t.Fatalf("expected to get HTTP status code 200, but got %d", resp.StatusCode)
 	}
 
 	var authResp *AuthResponse
@@ -50,7 +52,7 @@ func TestAuthenticateSuccess(t *testing.T) {
 
 	insertedUser.EncPassword = ""
 	if !reflect.DeepEqual(authResp.User, insertedUser) {
-		t.Fatal("expected the user to be the inserted user")
+		t.Fatal("expected the user to match inserted user (excluding password)")
 	}
 }
 
@@ -59,13 +61,15 @@ func TestAuthenticateFailure(t *testing.T) {
 	defer tdb.teardown(t)
 	fixtures.AddUser(tdb.store, false, "qwe", "rty")
 
-	app := fiber.New()
+	app := fiber.New(fiber.Config{
+		ErrorHandler: ErrorHandler,
+	})
 	authHandler := NewAuthHandler(tdb.store.User)
 	app.Post("/auth", authHandler.HandleAuthenticate)
 
 	params := &AuthParams{
 		Email:    "qwe@rty.com",
-		Password: "qwerty12345",
+		Password: "wrong_password", // incorrect password
 	}
 
 	b, _ := json.Marshal(params)
@@ -77,20 +81,7 @@ func TestAuthenticateFailure(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if resp.StatusCode != http.StatusBadRequest {
-		t.Fatalf("expected to get status code 400, but got %d", resp.StatusCode)
-	}
-
-	var genResp *genericResp
-	if err := json.NewDecoder(resp.Body).Decode(&genResp); err != nil {
-		t.Fatal(err)
-	}
-
-	if genResp.Type != "error" {
-		t.Fatalf("expected the type of gen response to be error, but got %s", genResp.Type)
-	}
-
-	if genResp.Msg != "invalid credentials" {
-		t.Fatalf("expected the message of gen response to be <invalid credentials>, but got %s", genResp.Msg)
+	if resp.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("expected status code 401, but got %d", resp.StatusCode)
 	}
 }

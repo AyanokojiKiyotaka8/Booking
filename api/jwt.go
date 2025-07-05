@@ -1,4 +1,4 @@
-package middleware
+package api
 
 import (
 	"fmt"
@@ -15,23 +15,28 @@ func JWTAuthentication(userStore db.UserStore) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		token := c.Get("X-Api-Token")
 		if len(token) == 0 {
-			return fmt.Errorf("unauthorized")
+			return ErrUnauthorized()
 		}
 
 		claims, err := validateToken(token)
 		if err != nil {
-			return err
+			return ErrUnauthorized()
 		}
 
-		userID, err := primitive.ObjectIDFromHex(claims["id"].(string))
+		idStr, ok := claims["id"].(string)
+		if !ok {
+			return ErrUnauthorized()
+		}
+
+		userID, err := primitive.ObjectIDFromHex(idStr)
 		if err != nil {
-			return fmt.Errorf("unauthorized")
+			return ErrUnauthorized()
 		}
 
 		filter := bson.M{"_id": userID}
 		user, err := userStore.GetUser(c.Context(), filter)
 		if err != nil {
-			return fmt.Errorf("unauthorized")
+			return ErrUnauthorized()
 		}
 		c.Context().SetUserValue("user", user)
 		return c.Next()
@@ -42,7 +47,7 @@ func validateToken(tokenStr string) (jwt.MapClaims, error) {
 	token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			fmt.Println("invalid signing method", token.Header["alg"])
-			return nil, fmt.Errorf("unauthorized")
+			return nil, ErrUnauthorized()
 		}
 		secret := os.Getenv("JWT_SECRET")
 		return []byte(secret), nil
@@ -50,13 +55,13 @@ func validateToken(tokenStr string) (jwt.MapClaims, error) {
 
 	if err != nil {
 		fmt.Println("failed to parse JWT token", err)
-		return nil, fmt.Errorf("unauthorized")
+		return nil, ErrUnauthorized()
 	}
 
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok || !token.Valid {
 		fmt.Println("token is invalid")
-		return nil, fmt.Errorf("unauthorized")
+		return nil, ErrUnauthorized()
 	}
 	return claims, nil
 }

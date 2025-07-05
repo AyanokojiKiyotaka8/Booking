@@ -3,7 +3,6 @@ package api
 import (
 	"errors"
 	"fmt"
-	"net/http"
 	"os"
 	"time"
 
@@ -35,35 +34,23 @@ type AuthResponse struct {
 	Token string      `json:"token"`
 }
 
-type genericResp struct {
-	Type string `json:"type"`
-	Msg  string `json:"msg"`
-}
-
-func invalidCredentials(c *fiber.Ctx) error {
-	return c.Status(http.StatusBadRequest).JSON(genericResp{
-		Type: "error",
-		Msg:  "invalid credentials",
-	})
-}
-
 func (h *AuthHandler) HandleAuthenticate(c *fiber.Ctx) error {
 	var params *AuthParams
 	if err := c.BodyParser(&params); err != nil {
-		return err
+		return ErrBadRequest()
 	}
 
 	filter := bson.M{"email": params.Email}
 	user, err := h.userStore.GetUser(c.Context(), filter)
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
-			return invalidCredentials(c)
+			return ErrUnauthorized()
 		}
-		return err
+		return ErrInternalServerError()
 	}
 
 	if !types.IsValidPassword(user.EncPassword, params.Password) {
-		return invalidCredentials(c)
+		return ErrUnauthorized()
 	}
 
 	resp := &AuthResponse{
@@ -74,10 +61,10 @@ func (h *AuthHandler) HandleAuthenticate(c *fiber.Ctx) error {
 }
 
 func CreateTokenFromUser(user *types.User) string {
-	claims := &jwt.MapClaims{
-		"id":    user.ID,
+	claims := jwt.MapClaims{
+		"id":    user.ID.Hex(),
 		"email": user.Email,
-		"exp":   jwt.NewNumericDate(time.Now().Add(time.Hour * 1000)),
+		"exp":   jwt.NewNumericDate(time.Now().Add(time.Hour * 1)),
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)

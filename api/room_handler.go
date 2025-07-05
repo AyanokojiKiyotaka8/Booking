@@ -30,27 +30,21 @@ func NewRoomHandler(store *db.Store) *RoomHandler {
 func (h *RoomHandler) HandleBookRoom(c *fiber.Ctx) error {
 	var params *RoomBookParams
 	if err := c.BodyParser(&params); err != nil {
-		return err
+		return ErrBadRequest()
 	}
 
 	if time.Now().After(params.FromDate) || !params.TillDate.After(params.FromDate) {
-		return c.Status(http.StatusBadRequest).JSON(genericResp{
-			Type: "error",
-			Msg:  "inappropriate booking period",
-		})
+		return NewError(http.StatusBadRequest, "inappropriate booking period")
 	}
 
 	user, ok := c.Context().UserValue("user").(*types.User)
 	if !ok {
-		return c.Status(http.StatusInternalServerError).JSON(genericResp{
-			Type: "error",
-			Msg:  "internal server error",
-		})
+		return ErrInternalServerError()
 	}
 
 	roomID, err := primitive.ObjectIDFromHex(c.Params("id"))
 	if err != nil {
-		return err
+		return NewError(http.StatusBadRequest, "invalid room ID format")
 	}
 
 	filter := bson.M{
@@ -65,13 +59,10 @@ func (h *RoomHandler) HandleBookRoom(c *fiber.Ctx) error {
 	}
 	bookings, err := h.store.Booking.GetBookings(c.Context(), filter)
 	if err != nil {
-		return err
+		return ErrInternalServerError()
 	}
 	if len(bookings) > 0 {
-		return c.Status(http.StatusBadRequest).JSON(genericResp{
-			Type: "error",
-			Msg:  "room is not available for that period",
-		})
+		return NewError(http.StatusBadRequest, "room is not available for that period")
 	}
 
 	booking := &types.Booking{
@@ -83,7 +74,7 @@ func (h *RoomHandler) HandleBookRoom(c *fiber.Ctx) error {
 	}
 	insertedBooking, err := h.store.Booking.InsertBooking(c.Context(), booking)
 	if err != nil {
-		return err
+		return ErrInternalServerError()
 	}
 	return c.JSON(map[string]any{"booked": insertedBooking})
 }
@@ -92,7 +83,7 @@ func (h *RoomHandler) HandleGetRooms(c *fiber.Ctx) error {
 	filter := bson.M{}
 	rooms, err := h.store.Room.GetRooms(c.Context(), filter)
 	if err != nil {
-		return err
+		return ErrInternalServerError()
 	}
 	return c.JSON(rooms)
 }

@@ -6,7 +6,6 @@ import (
 	"log"
 
 	"github.com/AyanokojiKiyotaka8/Booking/api"
-	"github.com/AyanokojiKiyotaka8/Booking/api/middleware"
 	"github.com/AyanokojiKiyotaka8/Booking/db"
 	"github.com/gofiber/fiber/v2"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -38,12 +37,10 @@ func main() {
 	bookingHandler := api.NewBookingHandler(store)
 
 	app := fiber.New(fiber.Config{
-		ErrorHandler: func(c *fiber.Ctx, err error) error {
-			return c.JSON(map[string]string{"error": err.Error()})
-		},
+		ErrorHandler: api.ErrorHandler,
 	})
-	apiv1 := app.Group("/api/v1", middleware.JWTAuthentication(store.User))
-	admin := apiv1.Group("/admin", middleware.AdminAuth)
+	apiv1 := app.Group("/api/v1", api.JWTAuthentication(store.User))
+	admin := apiv1.Group("/admin", api.AdminAuth)
 	auth := app.Group("/api")
 
 	// auth APIs
