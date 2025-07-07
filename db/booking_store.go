@@ -51,11 +51,11 @@ func (s *MongoBookingStore) GetBookings(ctx context.Context, filter bson.M) ([]*
 }
 
 func (s *MongoBookingStore) GetBooking(ctx context.Context, filter bson.M) (*types.Booking, error) {
-	var booking *types.Booking
+	var booking types.Booking
 	if err := s.coll.FindOne(ctx, filter).Decode(&booking); err != nil {
 		return nil, err
 	}
-	return booking, nil
+	return &booking, nil
 }
 
 func (s *MongoBookingStore) UpdateBooking(ctx context.Context, filter bson.M, update bson.M) error {

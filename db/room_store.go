@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/AyanokojiKiyotaka8/Booking/types"
 	"go.mongodb.org/mongo-driver/bson"
@@ -33,7 +34,12 @@ func (s *MongoRoomStore) InsertRoom(ctx context.Context, room *types.Room) (*typ
 	if err != nil {
 		return nil, err
 	}
-	room.ID = insertedRoom.InsertedID.(primitive.ObjectID)
+
+	id, ok := insertedRoom.InsertedID.(primitive.ObjectID)
+	if !ok {
+		return nil, fmt.Errorf("failed to cast inserted ID to ObjectID")
+	}
+	room.ID = id
 
 	filter := bson.M{"_id": room.HotelID}
 	update := bson.M{"$push": bson.M{"rooms": room.ID}}

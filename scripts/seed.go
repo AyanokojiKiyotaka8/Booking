@@ -52,6 +52,10 @@ func main() {
 	fmt.Println("admin -> ", api.CreateTokenFromUser(admin))
 	hotel := fixtures.AddHotel(store, "qqq", "www", 3)
 	room := fixtures.AddRoom(store, "large", true, 379.99, hotel.ID)
-	booking := fixtures.AddBoking(store, room.ID, user.ID, 7, time.Now(), time.Now().AddDate(0, 0, 3))
+	booking := fixtures.AddBooking(store, room.ID, user.ID, 7, time.Now(), time.Now().AddDate(0, 0, 3))
 	fmt.Println(booking)
+}
+
+func init() {
+	db.LoadConfig()
 }

@@ -2,7 +2,6 @@ package api
 
 import (
 	"context"
-	"log"
 	"testing"
 
 	"github.com/AyanokojiKiyotaka8/Booking/db"
@@ -18,7 +17,7 @@ type testdb struct {
 func setup(t *testing.T) *testdb {
 	client, err := mongo.Connect(context.TODO(), options.Client().ApplyURI(db.DBURI))
 	if err != nil {
-		log.Fatal(err)
+		t.Fatal(err)
 	}
 
 	store := &db.Store{
@@ -37,4 +36,8 @@ func (tdb *testdb) teardown(t *testing.T) {
 	if err := tdb.client.Database(db.TestDBNAME).Drop(context.Background()); err != nil {
 		t.Fatal(err)
 	}
+}
+
+func init() {
+	db.LoadConfig()
 }

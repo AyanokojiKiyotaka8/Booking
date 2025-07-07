@@ -41,7 +41,7 @@ func TestAuthenticateSuccess(t *testing.T) {
 		t.Fatalf("expected to get HTTP status code 200, but got %d", resp.StatusCode)
 	}
 
-	var authResp *AuthResponse
+	var authResp AuthResponse
 	if err := json.NewDecoder(resp.Body).Decode(&authResp); err != nil {
 		t.Fatal(err)
 	}

@@ -50,7 +50,7 @@ func (h *UserHandler) HandleGetUsers(c *fiber.Ctx) error {
 }
 
 func (h *UserHandler) HandlePostUser(c *fiber.Ctx) error {
-	var userParams *types.CreateUserParams
+	var userParams types.CreateUserParams
 	if err := c.BodyParser(&userParams); err != nil {
 		return ErrBadRequest()
 	}
@@ -58,7 +58,7 @@ func (h *UserHandler) HandlePostUser(c *fiber.Ctx) error {
 		return c.Status(http.StatusBadRequest).JSON(errors)
 	}
 
-	user, err := types.NewUserFromParams(userParams)
+	user, err := types.NewUserFromParams(&userParams)
 	if err != nil {
 		return ErrBadRequest()
 	}
@@ -95,7 +95,7 @@ func (h *UserHandler) HandlePutUser(c *fiber.Ctx) error {
 		return NewError(http.StatusBadRequest, "invalid user ID format")
 	}
 
-	var params *types.UpdateUserParams
+	var params types.UpdateUserParams
 	if err := c.BodyParser(&params); err != nil {
 		return ErrBadRequest()
 	}

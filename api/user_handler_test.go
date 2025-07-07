@@ -40,13 +40,9 @@ func TestPostUser(t *testing.T) {
 		t.Fatalf("expected status %d, got %d", fiber.StatusOK, resp.StatusCode)
 	}
 
-	var user *types.User
+	var user types.User
 	if err := json.NewDecoder(resp.Body).Decode(&user); err != nil {
 		t.Fatal(err)
-	}
-
-	if user == nil {
-		t.Fatal("user is nil after decoding response")
 	}
 
 	if user.ID.IsZero() {

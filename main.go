@@ -2,8 +2,8 @@ package main
 
 import (
 	"context"
-	"flag"
 	"log"
+	"os"
 
 	"github.com/AyanokojiKiyotaka8/Booking/api"
 	"github.com/AyanokojiKiyotaka8/Booking/db"
@@ -13,9 +13,6 @@ import (
 )
 
 func main() {
-	listenAddr := flag.String("listenAddr", ":5000", "The listen address of the API server")
-	flag.Parse()
-
 	client, err := mongo.Connect(context.TODO(), options.Client().ApplyURI(db.DBURI))
 	if err != nil {
 		log.Fatal(err)
@@ -47,7 +44,7 @@ func main() {
 	auth.Post("/auth", authHandler.HandleAuthenticate)
 
 	// user APIs
-	apiv1.Get("/user", userHandler.HandleGetUsers)
+	admin.Get("/user", userHandler.HandleGetUsers)
 	apiv1.Get("/user/:id", userHandler.HandleGetUser)
 	apiv1.Post("/user", userHandler.HandlePostUser)
 	apiv1.Delete("/user/:id", userHandler.HandleDeleteUser)
@@ -69,5 +66,9 @@ func main() {
 	apiv1.Get("/booking/:id", bookingHandler.HandleGetBooking)
 	apiv1.Get("/booking/:id/cancel", bookingHandler.HandleCancelBooking)
 
-	app.Listen(*listenAddr)
+	app.Listen(os.Getenv("HTTP_LISTEN_ADDRESS"))
+}
+
+func init() {
+	db.LoadConfig()
 }

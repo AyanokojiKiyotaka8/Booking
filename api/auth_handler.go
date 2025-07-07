@@ -35,7 +35,7 @@ type AuthResponse struct {
 }
 
 func (h *AuthHandler) HandleAuthenticate(c *fiber.Ctx) error {
-	var params *AuthParams
+	var params AuthParams
 	if err := c.BodyParser(&params); err != nil {
 		return ErrBadRequest()
 	}

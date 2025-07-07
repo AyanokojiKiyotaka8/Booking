@@ -60,7 +60,7 @@ func AddRoom(store *db.Store, size string, seaSide bool, price float64, hotelID 
 	return insertedRoom
 }
 
-func AddBoking(store *db.Store, roomID, userID primitive.ObjectID, numPersons int, fromDate, tillDate time.Time) *types.Booking {
+func AddBooking(store *db.Store, roomID, userID primitive.ObjectID, numPersons int, fromDate, tillDate time.Time) *types.Booking {
 	booking := &types.Booking{
 		RoomID:     roomID,
 		UserID:     userID,

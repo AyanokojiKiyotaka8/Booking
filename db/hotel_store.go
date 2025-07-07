@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/AyanokojiKiyotaka8/Booking/types"
 	"go.mongodb.org/mongo-driver/bson"
@@ -33,7 +34,11 @@ func (s *MongoHotelStore) InsertHotel(ctx context.Context, hotel *types.Hotel) (
 	if err != nil {
 		return nil, err
 	}
-	hotel.ID = insertedHotel.InsertedID.(primitive.ObjectID)
+	id, ok := insertedHotel.InsertedID.(primitive.ObjectID)
+	if !ok {
+		return nil, fmt.Errorf("failed to cast inserted ID to ObjectID")
+	}
+	hotel.ID = id
 	return hotel, nil
 }
 
@@ -56,9 +61,9 @@ func (s *MongoHotelStore) GetHotels(ctx context.Context, filter bson.M) ([]*type
 }
 
 func (s *MongoHotelStore) GetHotel(ctx context.Context, filter bson.M) (*types.Hotel, error) {
-	var hotel *types.Hotel
+	var hotel types.Hotel
 	if err := s.coll.FindOne(ctx, filter).Decode(&hotel); err != nil {
 		return nil, err
 	}
-	return hotel, nil
+	return &hotel, nil
 }

@@ -90,5 +90,5 @@ func (h *BookingHandler) HandleCancelBooking(c *fiber.Ctx) error {
 	if err := h.store.Booking.UpdateBooking(c.Context(), filter, update); err != nil {
 		return ErrInternalServerError()
 	}
-	return c.JSON("cancelled booking")
+	return c.JSON(fiber.Map{"cancelled": booking.ID.Hex()})
 }

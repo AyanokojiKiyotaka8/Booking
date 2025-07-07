@@ -21,7 +21,7 @@ func TestGetBooking(t *testing.T) {
 	otherUser := fixtures.AddUser(tdb.store, false, "aaa", "bbb")
 	hotel := fixtures.AddHotel(tdb.store, "qqq", "www", 3)
 	room := fixtures.AddRoom(tdb.store, "large", true, 123.45, hotel.ID)
-	booking := fixtures.AddBoking(tdb.store, room.ID, user.ID, 7, time.Now(), time.Now().AddDate(0, 0, 3))
+	booking := fixtures.AddBooking(tdb.store, room.ID, user.ID, 7, time.Now(), time.Now().AddDate(0, 0, 3))
 
 	app := fiber.New(fiber.Config{
 		ErrorHandler: ErrorHandler,
@@ -43,7 +43,7 @@ func TestGetBooking(t *testing.T) {
 			t.Fatalf("expected status 200, got %d", resp.StatusCode)
 		}
 
-		var bookingResp *types.Booking
+		var bookingResp types.Booking
 		if err := json.NewDecoder(resp.Body).Decode(&bookingResp); err != nil {
 			t.Fatal(err)
 		}
@@ -79,7 +79,7 @@ func TestGetBookings(t *testing.T) {
 	admin := fixtures.AddUser(tdb.store, true, "admin", "admin")
 	hotel := fixtures.AddHotel(tdb.store, "qqq", "www", 3)
 	room := fixtures.AddRoom(tdb.store, "large", true, 123.45, hotel.ID)
-	booking := fixtures.AddBoking(tdb.store, room.ID, user.ID, 7, time.Now(), time.Now().AddDate(0, 0, 3))
+	booking := fixtures.AddBooking(tdb.store, room.ID, user.ID, 7, time.Now(), time.Now().AddDate(0, 0, 3))
 
 	app := fiber.New(fiber.Config{
 		ErrorHandler: ErrorHandler,
